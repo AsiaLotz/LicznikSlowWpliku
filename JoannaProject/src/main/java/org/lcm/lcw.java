@@ -1,17 +1,18 @@
 package org.lcm;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Scanner;
 import java.util.stream.Collectors;
+import java.io.File;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.FileOutputStream;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 public class lcw {
 
@@ -98,7 +99,63 @@ public class lcw {
   private static void printMap(Map<String, Integer> map) {
     map.forEach((key, value) -> System.out.println(key + " " + value));
   }
+
+  private static class WriteDataToExcel {
+
+    // any exceptions need to be caught
+    private static void liczbaSlow(String[] args) throws Exception
+    {
+      // workbook object
+      XSSFWorkbook workbook = new XSSFWorkbook();
+
+      // spreadsheet object
+      XSSFSheet spreadsheet
+              = workbook.createSheet(" Liczba slow ");
+
+      // creating a row object
+      XSSFRow row;
+
+      // This data needs to be written (Object[])
+      Map<String, Object[]> liczbaSlow
+              = new TreeMap<>();
+
+      liczbaSlow.put(
+              "1",
+              new Object[] { "Slowo", "Ilosc" });
+
+
+
+      Set<String> keyid = liczbaSlow.keySet();
+
+      int rowid = 0;
+
+      // writing the data into the sheets...
+
+      for (String key : keyid) {
+
+        row = spreadsheet.createRow(rowid++);
+        Object[] objectArr = liczbaSlow.get(key);
+        int cellid = 0;
+
+        for (Object obj : objectArr) {
+          Cell cell = row.createCell(cellid++);
+          cell.setCellValue((String)obj);
+        }
+      }
+
+      // .xlsx is the format for Excel Sheets...
+      // writing the workbook into the file...
+      FileOutputStream out = new FileOutputStream(
+              new File("C:/Wyniki/liczba slow.xlsx"));
+
+      workbook.write(out);
+      out.close();
+    }
+  }
+
 }
+
+
 
 //https://www.geeksforgeeks.org/how-to-write-data-into-excel-sheet-using-java/
 
