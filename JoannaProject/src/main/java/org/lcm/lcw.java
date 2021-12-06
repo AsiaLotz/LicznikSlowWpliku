@@ -1,10 +1,8 @@
 package org.lcm;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -15,6 +13,9 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -22,140 +23,157 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class lcw {
 
-  private static final boolean ASC = true;
-  private static final boolean DESC = false;
+    private static final boolean ASC = true;
+    private static final boolean DESC = false;
 
-  public static void main(String[] args) throws Exception {
-    Scanner odczyt = new Scanner(System.in);
+    public static void main(String[] args) throws Exception {
+        Scanner fileText = new Scanner(System.in);
 
-    System.out.println("Podaj sciezke pliku:");
-    String plik = odczyt.nextLine();
+        System.out.println("Podaj pelna sciezke do pliku:");
+        String openedFile = fileText.nextLine();
 
-    FileReader fr = null;
-    try {
-      fr = new FileReader(plik);
-    } catch (FileNotFoundException e) {
-      System.out.println("Pliku nie ma w domu");
-      return;
-    }
-
-    double fileSizeInBytes = plik.length();
-    double fileSizeInKB = fileSizeInBytes / 1024;
-    double fileSizeInMB = fileSizeInKB / 1024;
-
-    if (fileSizeInMB <= 5) {
-      System.out.println(fr);
-    } else {
-      System.out.println("Za gruby, nie przejdzie");
-    }
-
-    BufferedReader br = null;
-
-    try {
-      String line;
-
-      br = new BufferedReader(fr);
-      Map<String, Integer> iloscSlow = new HashMap<>();
-
-      String word = null;
-      while ((line = br.readLine()) != null) {
-
-        Scanner sc = new Scanner(line);
-        while (sc.hasNext()) {
-          word = sc.next();
-          if (!iloscSlow.containsKey(word)) {
-            iloscSlow.put(word, 1);
-          } else {
-            iloscSlow.put(word, iloscSlow.get(word) + 1);
-          }
+        FileReader fr = null;
+        try {
+            fr = new FileReader(openedFile);
+        } catch (FileNotFoundException e) {
+            System.out.println("Niestety najwidoczniej pliku nie ma w domu");
+            return;
         }
-      }
 
-      System.out.println("Przed posortowaniem......");
-      printMap(iloscSlow);
+        double fileSizeInBytes = openedFile.length();
+        double fileSizeInKB = fileSizeInBytes / 1024;
+        double fileSizeInMB = fileSizeInKB / 1024;
 
-      System.out.println("Po posortowaniu od najmniejszej......");
-      Map<String, Integer> sortedMapAsc = sortByValue(iloscSlow, ASC);
-      printMap(sortedMapAsc);
+        if (fileSizeInMB <= 5) {
+            System.out.println(fr);
+        } else {
+            System.out.println("Za gruby, nie przejdzie przez wrota");
+        }
 
-      System.out.println("Po posortowaniu od najwiekszej......");
-      Map<String, Integer> sortedMapDesc = sortByValue(iloscSlow, DESC);
-      printMap(sortedMapDesc);
+        BufferedReader br = null;
 
-      liczbaSlow(sortedMapAsc);
+        try {
+            String line;
 
-    } finally {
-      if (br != null) {
-        br.close();
-      }
-    }
-  }
+            br = new BufferedReader(fr);
+            Map<String, Integer> howManyWords = new HashMap<>();
 
-  private static Map<String, Integer> sortByValue(Map<String, Integer> ilosc, final boolean porzadek) {
-    List<Entry<String, Integer>> lista = new LinkedList<>(ilosc.entrySet());
+            String word = null;
+            while ((line = br.readLine()) != null) {
 
-    // Sortowanie listy słów w oparciu o wartość liczbową
-    lista.sort((slowa, liczba) -> {
-      if (porzadek) {
-        return slowa.getValue().compareTo(liczba.getValue()) == 0
-            ? slowa.getKey().compareTo(liczba.getKey())
-            : slowa.getValue().compareTo(liczba.getValue());
-      }
-      return liczba.getValue().compareTo(slowa.getValue()) == 0
-          ? liczba.getKey().compareTo(slowa.getKey())
-          : liczba.getValue().compareTo(slowa.getValue());
-    });
-    return lista.stream().collect(
-        Collectors.toMap(Entry::getKey, Entry::getValue, (a, b) -> b, LinkedHashMap::new));
-  }
+                Scanner sc = new Scanner(line);
+                while (sc.hasNext()) {
+                    word = sc.next();
+                    if (!howManyWords.containsKey(word)) {
+                        howManyWords.put(word, 1);
+                    } else {
+                        howManyWords.put(word, howManyWords.get(word) + 1);
+                    }
+                }
+            }
 
-  private static void liczbaSlow(Map<String, Integer> sortedMapAsc) throws Exception {
+            System.out.println("Przed posortowaniem......");
+            printMap(howManyWords);
 
-    XSSFWorkbook workbook = new XSSFWorkbook();
+            System.out.println("Po posortowaniu od najmniejszej......");
+            Map<String, Integer> sortedMapAsc = sortByValue(howManyWords, ASC);
+            printMap(sortedMapAsc);
 
-    XSSFSheet spreadsheet = workbook.createSheet(" Liczba slow ");
+            System.out.println("Po posortowaniu od najwiekszej......");
+            Map<String, Integer> sortedMapDesc = sortByValue(howManyWords, DESC);
+            printMap(sortedMapDesc);
 
-    XSSFRow row;
+            numberOfWords(sortedMapAsc);
 
-    Map<String, Object[]> liczbaSlow = new TreeMap<>();
-
-    liczbaSlow.put("1", new Object[]{"Slowo", "Ilosc"});
-    int idx = 2;
-    for (Entry<String, Integer> entry : sortedMapAsc.entrySet()) {
-      liczbaSlow.put(idx++ + "", new Object[]{
-          entry.getKey() + "",
-          entry.getValue() + ""});
+        } finally {
+            if (br != null) {
+                br.close();
+            }
+        }
     }
 
-    Set<String> keyid = liczbaSlow.keySet();
+    private static Map<String, Integer> sortByValue(Map<String, Integer> number, final boolean order) {
+        List<Entry<String, Integer>> list = new LinkedList<>(number.entrySet());
 
-    int rowid = 0;
-
-    for (String key : keyid) {
-
-      row = spreadsheet.createRow(rowid++);
-      Object[] objectArr = liczbaSlow.get(key);
-      int cellid = 0;
-
-      for (Object obj : objectArr) {
-        Cell cell = row.createCell(cellid++);
-        cell.setCellValue((String) obj);
-      }
+        // Sortowanie listy słów w oparciu o wartość liczbową
+        list.sort((word, numberValue) -> {
+            if (order) {
+                return word.getValue().compareTo(numberValue.getValue()) == 0
+                        ? word.getKey().compareTo(numberValue.getKey())
+                        : word.getValue().compareTo(numberValue.getValue());
+            }
+            return numberValue.getValue().compareTo(word.getValue()) == 0
+                    ? numberValue.getKey().compareTo(word.getKey())
+                    : numberValue.getValue().compareTo(word.getValue());
+        });
+        return list.stream().collect(
+                Collectors.toMap(Entry::getKey, Entry::getValue, (a, b) -> b, LinkedHashMap::new));
     }
 
-    FileOutputStream out = new FileOutputStream(
-        new File("C:/Wyniki/liczba slow.xlsx"));
+    private static void numberOfWords(Map<String, Integer> sortedMapAsc) throws Exception {
 
-    workbook.write(out);
-    out.close();
-    System.out.println("Plik wygenerowany");
-  }
+        XSSFWorkbook workbook = new XSSFWorkbook();
 
-  private static void printMap(Map<String, Integer> map) {
-    map.forEach((key, value) -> System.out.println(key + " " + value));
-  }
+        XSSFSheet spreadsheet = workbook.createSheet(" Liczba slow ");
+
+        XSSFRow row;
+
+        Map<String, Object[]> wordNumber = new TreeMap<>();
+
+        wordNumber.put("1", new Object[]{"Slowo", "Ilosc"});
+        int idx = 2;
+        for (Entry<String, Integer> entry : sortedMapAsc.entrySet()) {
+            wordNumber.put(idx++ + "", new Object[]{
+                    entry.getKey() + "",
+                    entry.getValue() + ""});
+        }
+
+        Set<String> keyId = wordNumber.keySet();
+
+        int rowId = 0;
+
+        for (String key : keyId) {
+
+            row = spreadsheet.createRow(rowId++);
+            Object[] objectArr = wordNumber.get(key);
+            int cellId = 0;
+
+            for (Object obj : objectArr) {
+                Cell cell = row.createCell(cellId++);
+                cell.setCellValue((String) obj);
+            }
+        }
+
+        FileOutputStream out = new FileOutputStream(
+                new File("C:/Wyniki/liczba slow.xlsx"));
+        workbook.write(out);
+        out.close();
+
+        System.out.println("Melduje ze plik EXCEL(xlsx) zostal wygenerowany");
+
+        try {
+            File file = new File("C:/Wyniki/liczba slow.zip");
+
+            FileOutputStream fos = new FileOutputStream(file);
+            ZipOutputStream zos = new ZipOutputStream(fos);
+
+            zos.putNextEntry(new ZipEntry("liczba slow.xlsx"));
+
+            byte[] bytes = Files.readAllBytes(Paths.get("C:/Wyniki/liczba slow.xlsx"));
+            zos.write(bytes, 0, bytes.length);
+            zos.closeEntry();
+            zos.close();
+
+        } catch (FileNotFoundException ex) {
+            System.err.format("The file %s does not exist", "C:/Wyniki/liczba slow.xlsx");
+        } catch (IOException ex) {
+            System.err.println("I/O error: " + ex);
+        }
+        System.out.println("Melduje ze plik ZIP zostal wygenerowany");
+    }
+
+    private static void printMap(Map<String, Integer> map) {
+        map.forEach((key, value) -> System.out.println(key + " " + value));
+    }
+
 }
-
-//https://www.geeksforgeeks.org/how-to-write-data-into-excel-sheet-using-java/
-
-//https://stackoverflow.com/questions/30135152/how-list-has-map-values-write-to-excel-file-using-apache-poi
